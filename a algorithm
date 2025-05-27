@@ -1,0 +1,78 @@
+import heapq
+
+class State:
+    def __init__(self, missionaries, cannibals, boat, path=[]):
+        self.missionaries = missionaries  # Left side missionaries
+        self.cannibals = cannibals        # Left side cannibals
+        self.boat = boat                  # 'L' or 'R'
+        self.path = path                  # List of previous states
+
+    def is_valid(self):
+        # Check if state is valid (no outnumbering and within bounds)
+        M, C = self.missionaries, self.cannibals
+        MR, CR = 2 - M, 2 - C  # Right side counts
+
+        def safe(m, c):
+            return m == 0 or m >= c
+
+        return 0 <= M <= 2 and 0 <= C <= 2 and \
+               safe(M, C) and safe(MR, CR)
+
+    def is_goal(self):
+        return self.missionaries == 0 and self.cannibals == 0 and self.boat == 'R'
+
+    def get_next_states(self):
+        moves = [(1, 0), (0, 1), (1, 1), (2, 0), (0, 2)]
+        next_states = []
+
+        for m, c in moves:
+            if self.boat == 'L':
+                new_state = State(self.missionaries - m, self.cannibals - c, 'R', self.path + [self])
+            else:
+                new_state = State(self.missionaries + m, self.cannibals + c, 'L', self.path + [self])
+            
+            if new_state.is_valid():
+                next_states.append(new_state)
+
+        return next_states
+
+    def __lt__(self, other):
+        return True  # Required for heapq (but won't affect correctness)
+
+    def __str__(self):
+        return f"Left: M={self.missionaries}, C={self.cannibals}, Boat: {self.boat}"
+
+    def heuristic(self):
+        return self.missionaries + self.cannibals  # People left on the left side
+
+
+def a_star_search():
+    start = State(2, 2, 'L')
+    open_list = []
+    heapq.heappush(open_list, (start.heuristic(), start))
+    visited = set()
+
+    while open_list:
+        _, current = heapq.heappop(open_list)
+
+        if current.is_goal():
+            # Print the path
+            for idx, state in enumerate(current.path + [current]):
+                print(f"Step {idx}: {state}")
+            return True
+
+        key = (current.missionaries, current.cannibals, current.boat)
+        if key in visited:
+            continue
+        visited.add(key)
+
+        for neighbor in current.get_next_states():
+            cost = len(neighbor.path) + 1
+            priority = cost + neighbor.heuristic()
+            heapq.heappush(open_list, (priority, neighbor))
+
+    print("No solution found.")
+    return False
+
+# Run the A* search
+a_star_search()
